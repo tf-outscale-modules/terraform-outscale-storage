@@ -133,6 +133,74 @@ module "storage" {
 3. **Tag format differences** — Outscale resources use `tags { key, value }` blocks while OOS (AWS) resources use `tags = {}` maps; this is handled transparently by the module
 
 <!-- BEGIN_TF_DOCS -->
+## Requirements
+
+| Name | Version |
+|------|---------|
+| <a name="requirement_terraform"></a> [terraform](#requirement\_terraform) | >= 1.5 |
+| <a name="requirement_aws"></a> [aws](#requirement\_aws) | ~> 5.0 |
+| <a name="requirement_outscale"></a> [outscale](#requirement\_outscale) | ~> 1.0 |
+
+## Providers
+
+| Name | Version |
+|------|---------|
+| <a name="provider_aws"></a> [aws](#provider\_aws) | ~> 5.0 |
+| <a name="provider_outscale"></a> [outscale](#provider\_outscale) | ~> 1.0 |
+
+## Modules
+
+No modules.
+
+## Resources
+
+| Name | Type |
+|------|------|
+| [aws_s3_bucket.this](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/s3_bucket) | resource |
+| [aws_s3_object.this](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/s3_object) | resource |
+| [outscale_image.this](https://registry.terraform.io/providers/outscale/outscale/latest/docs/resources/image) | resource |
+| [outscale_image_export_task.this](https://registry.terraform.io/providers/outscale/outscale/latest/docs/resources/image_export_task) | resource |
+| [outscale_snapshot.this](https://registry.terraform.io/providers/outscale/outscale/latest/docs/resources/snapshot) | resource |
+| [outscale_snapshot_export_task.this](https://registry.terraform.io/providers/outscale/outscale/latest/docs/resources/snapshot_export_task) | resource |
+| [outscale_volume.this](https://registry.terraform.io/providers/outscale/outscale/latest/docs/resources/volume) | resource |
+| [outscale_volume_link.this](https://registry.terraform.io/providers/outscale/outscale/latest/docs/resources/volume_link) | resource |
+
+## Inputs
+
+| Name | Description | Type | Default | Required |
+|------|-------------|------|---------|:--------:|
+| <a name="input_enable_image"></a> [enable\_image](#input\_enable\_image) | Enable image (OMI) resources. | `bool` | `false` | no |
+| <a name="input_enable_oos"></a> [enable\_oos](#input\_enable\_oos) | Enable OOS (S3-compatible object storage) resources. | `bool` | `false` | no |
+| <a name="input_enable_snapshot"></a> [enable\_snapshot](#input\_enable\_snapshot) | Enable snapshot resources. | `bool` | `false` | no |
+| <a name="input_enable_volume"></a> [enable\_volume](#input\_enable\_volume) | Enable BSU volume resources. | `bool` | `false` | no |
+| <a name="input_environment"></a> [environment](#input\_environment) | Deployment environment. Valid values: dev, staging, prod. | `string` | n/a | yes |
+| <a name="input_image_export_osu_api_key"></a> [image\_export\_osu\_api\_key](#input\_image\_export\_osu\_api\_key) | OSU API key for image export tasks. Required when image\_export\_tasks is non-empty. | <pre>object({<br/>    api_key_id = string<br/>    secret_key = string<br/>  })</pre> | `null` | no |
+| <a name="input_image_export_tasks"></a> [image\_export\_tasks](#input\_image\_export\_tasks) | Map of image export tasks. Use image\_key to reference an image from the images map, or image\_id for an external image. | <pre>map(object({<br/>    image_key         = optional(string)<br/>    image_id          = optional(string)<br/>    disk_image_format = string<br/>    osu_bucket        = string<br/>    osu_prefix        = optional(string)<br/>    tags              = optional(map(string), {})<br/>  }))</pre> | `{}` | no |
+| <a name="input_images"></a> [images](#input\_images) | Map of images (OMI) to create. Specify vm\_id to create from a running VM, or source\_image\_id to copy an existing image. | <pre>map(object({<br/>    image_name         = string<br/>    description        = optional(string)<br/>    vm_id              = optional(string)<br/>    source_image_id    = optional(string)<br/>    source_region_name = optional(string)<br/>    no_reboot          = optional(bool)<br/>    block_device_mappings = optional(list(object({<br/>      device_name         = optional(string)<br/>      virtual_device_name = optional(string)<br/>      bsu = optional(object({<br/>        delete_on_vm_deletion = optional(bool)<br/>        iops                  = optional(number)<br/>        snapshot_id           = optional(string)<br/>        volume_size           = optional(number)<br/>        volume_type           = optional(string)<br/>      }))<br/>    })), [])<br/>    tags = optional(map(string), {})<br/>  }))</pre> | `{}` | no |
+| <a name="input_oos_buckets"></a> [oos\_buckets](#input\_oos\_buckets) | Map of OOS (S3-compatible) buckets to create. | <pre>map(object({<br/>    bucket        = string<br/>    force_destroy = optional(bool, false)<br/>    tags          = optional(map(string), {})<br/>  }))</pre> | `{}` | no |
+| <a name="input_oos_objects"></a> [oos\_objects](#input\_oos\_objects) | Map of OOS objects to create. Use bucket\_key to reference a bucket from the oos\_buckets map, or bucket for an external bucket name. | <pre>map(object({<br/>    bucket_key = optional(string)<br/>    bucket     = optional(string)<br/>    key        = string<br/>    source     = optional(string)<br/>    content    = optional(string)<br/>    tags       = optional(map(string), {})<br/>  }))</pre> | `{}` | no |
+| <a name="input_project_name"></a> [project\_name](#input\_project\_name) | Name of the project. Used in resource naming and tagging. | `string` | n/a | yes |
+| <a name="input_snapshot_export_osu_api_key"></a> [snapshot\_export\_osu\_api\_key](#input\_snapshot\_export\_osu\_api\_key) | OSU API key for snapshot export tasks. Required when snapshot\_export\_tasks is non-empty. | <pre>object({<br/>    api_key_id = string<br/>    secret_key = string<br/>  })</pre> | `null` | no |
+| <a name="input_snapshot_export_tasks"></a> [snapshot\_export\_tasks](#input\_snapshot\_export\_tasks) | Map of snapshot export tasks. Use snapshot\_key to reference a snapshot from the snapshots map, or snapshot\_id for an external snapshot. | <pre>map(object({<br/>    snapshot_key      = optional(string)<br/>    snapshot_id       = optional(string)<br/>    disk_image_format = string<br/>    osu_bucket        = string<br/>    osu_prefix        = optional(string)<br/>    tags              = optional(map(string), {})<br/>  }))</pre> | `{}` | no |
+| <a name="input_snapshots"></a> [snapshots](#input\_snapshots) | Map of snapshots to create. Use volume\_key to reference a volume from the volumes map, or volume\_id for an external volume. Set source\_snapshot\_id to copy an existing snapshot. | <pre>map(object({<br/>    description        = optional(string)<br/>    volume_key         = optional(string)<br/>    volume_id          = optional(string)<br/>    source_snapshot_id = optional(string)<br/>    source_region_name = optional(string)<br/>    file_location      = optional(string)<br/>    snapshot_size      = optional(number)<br/>    tags               = optional(map(string), {})<br/>  }))</pre> | `{}` | no |
+| <a name="input_tags"></a> [tags](#input\_tags) | Additional tags to apply to all resources. Merged with common tags (Project, Environment, ManagedBy). | `map(string)` | `{}` | no |
+| <a name="input_volume_links"></a> [volume\_links](#input\_volume\_links) | Map of volume-to-VM attachments. Use volume\_key to reference a volume from the volumes map, or volume\_id for an external volume. | <pre>map(object({<br/>    device_name = string<br/>    vm_id       = string<br/>    volume_key  = optional(string)<br/>    volume_id   = optional(string)<br/>    tags        = optional(map(string), {})<br/>  }))</pre> | `{}` | no |
+| <a name="input_volumes"></a> [volumes](#input\_volumes) | Map of BSU volumes to create. Each key is a logical name used for cross-referencing. | <pre>map(object({<br/>    subregion_name = string<br/>    size           = number<br/>    volume_type    = optional(string, "standard")<br/>    iops           = optional(number)<br/>    snapshot_id    = optional(string)<br/>    tags           = optional(map(string), {})<br/>  }))</pre> | `{}` | no |
+
+## Outputs
+
+| Name | Description |
+|------|-------------|
+| <a name="output_image_export_task_ids"></a> [image\_export\_task\_ids](#output\_image\_export\_task\_ids) | Map of image export task keys to their IDs. |
+| <a name="output_image_ids"></a> [image\_ids](#output\_image\_ids) | Map of image keys to their IDs. |
+| <a name="output_oos_bucket_arns"></a> [oos\_bucket\_arns](#output\_oos\_bucket\_arns) | Map of OOS bucket keys to their ARNs. |
+| <a name="output_oos_bucket_ids"></a> [oos\_bucket\_ids](#output\_oos\_bucket\_ids) | Map of OOS bucket keys to their IDs. |
+| <a name="output_oos_object_ids"></a> [oos\_object\_ids](#output\_oos\_object\_ids) | Map of OOS object keys to their IDs. |
+| <a name="output_snapshot_export_task_ids"></a> [snapshot\_export\_task\_ids](#output\_snapshot\_export\_task\_ids) | Map of snapshot export task keys to their IDs. |
+| <a name="output_snapshot_ids"></a> [snapshot\_ids](#output\_snapshot\_ids) | Map of snapshot keys to their IDs. |
+| <a name="output_volume_details"></a> [volume\_details](#output\_volume\_details) | Map of volume keys to their details (id, size, type, iops, state, subregion). |
+| <a name="output_volume_ids"></a> [volume\_ids](#output\_volume\_ids) | Map of volume keys to their IDs. |
+| <a name="output_volume_link_states"></a> [volume\_link\_states](#output\_volume\_link\_states) | Map of volume link keys to their state. |
 <!-- END_TF_DOCS -->
 
 ## Documentation
