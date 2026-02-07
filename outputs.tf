@@ -53,22 +53,3 @@ output "image_export_task_ids" {
   description = "Map of image export task keys to their IDs."
   value       = { for k, v in outscale_image_export_task.this : k => v.id }
 }
-
-################################################################################
-# OOS
-################################################################################
-
-output "oos_bucket_ids" {
-  description = "Map of OOS bucket keys to their IDs."
-  value       = { for k, v in aws_s3_bucket.this : k => v.id }
-}
-
-output "oos_bucket_arns" {
-  description = "Map of OOS bucket keys to their ARNs."
-  value       = { for k, v in aws_s3_bucket.this : k => v.arn }
-}
-
-output "oos_object_ids" {
-  description = "Map of OOS object keys to their IDs."
-  value       = { for k, v in aws_s3_object.this : k => v.id }
-}

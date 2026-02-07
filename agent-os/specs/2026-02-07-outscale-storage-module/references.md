@@ -3,7 +3,6 @@
 ## Provider Documentation
 
 - Outscale Terraform Provider: https://registry.terraform.io/providers/outscale/outscale/latest/docs
-- AWS Provider (for OOS): https://registry.terraform.io/providers/hashicorp/aws/latest/docs
 
 ## BSU Volume Resources
 
@@ -20,15 +19,9 @@
 - `outscale_image`: https://registry.terraform.io/providers/outscale/outscale/latest/docs/resources/image
 - `outscale_image_export_task`: https://registry.terraform.io/providers/outscale/outscale/latest/docs/resources/image_export_task
 
-## OOS (S3-Compatible) Resources
-
-- `aws_s3_bucket`: https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/s3_bucket
-- `aws_s3_object`: https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/s3_object
-
 ## Outscale API Documentation
 
 - Outscale API: https://docs.outscale.com/api
 - BSU Volumes: https://docs.outscale.com/en/userguide/About-Volumes.html
 - Snapshots: https://docs.outscale.com/en/userguide/About-Snapshots.html
 - OMI Images: https://docs.outscale.com/en/userguide/About-OMIs.html
-- OOS: https://docs.outscale.com/en/userguide/About-OOS.html

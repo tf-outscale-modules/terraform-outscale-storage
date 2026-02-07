@@ -20,12 +20,6 @@ variable "enable_image" {
   default     = false
 }
 
-variable "enable_oos" {
-  description = "Enable OOS (S3-compatible object storage) resources."
-  type        = bool
-  default     = false
-}
-
 ################################################################################
 # Common
 ################################################################################
@@ -237,38 +231,4 @@ variable "image_export_osu_api_key" {
   })
   default   = null
   sensitive = true
-}
-
-################################################################################
-# OOS (Object Storage)
-################################################################################
-
-variable "oos_buckets" {
-  description = "Map of OOS (S3-compatible) buckets to create."
-  type = map(object({
-    bucket        = string
-    force_destroy = optional(bool, false)
-    tags          = optional(map(string), {})
-  }))
-  default = {}
-}
-
-variable "oos_objects" {
-  description = "Map of OOS objects to create. Use bucket_key to reference a bucket from the oos_buckets map, or bucket for an external bucket name."
-  type = map(object({
-    bucket_key = optional(string)
-    bucket     = optional(string)
-    key        = string
-    source     = optional(string)
-    content    = optional(string)
-    tags       = optional(map(string), {})
-  }))
-  default = {}
-
-  validation {
-    condition = alltrue([
-      for k, v in var.oos_objects : v.bucket_key != null || v.bucket != null
-    ])
-    error_message = "Each OOS object must specify either bucket_key or bucket."
-  }
 }

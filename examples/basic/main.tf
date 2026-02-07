@@ -6,10 +6,6 @@ terraform {
       source  = "outscale/outscale"
       version = "~> 1.0"
     }
-    aws = {
-      source  = "hashicorp/aws"
-      version = "~> 5.0"
-    }
   }
 }
 
@@ -18,21 +14,6 @@ provider "outscale" {
   access_key_id = var.access_key_id
   secret_key_id = var.secret_key_id
   region        = var.region
-}
-
-# AWS provider configured for Outscale OOS (S3-compatible)
-provider "aws" {
-  region     = var.region
-  access_key = var.access_key_id
-  secret_key = var.secret_key_id
-
-  skip_credentials_validation = true
-  skip_requesting_account_id  = true
-  skip_region_validation      = true
-
-  endpoints {
-    s3 = "https://oos.${var.region}.outscale.com"
-  }
 }
 
 module "storage" {
@@ -57,14 +38,6 @@ module "storage" {
     data_backup = {
       volume_key  = "data"
       description = "Daily backup of data volume"
-    }
-  }
-
-  # Enable OOS
-  enable_oos = true
-  oos_buckets = {
-    assets = {
-      bucket = "my-project-dev-assets"
     }
   }
 

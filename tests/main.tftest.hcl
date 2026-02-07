@@ -8,20 +8,6 @@ provider "outscale" {
   region        = "eu-west-2"
 }
 
-provider "aws" {
-  region     = "eu-west-2"
-  access_key = "test-access-key"
-  secret_key = "test-secret-key"
-
-  skip_credentials_validation = true
-  skip_requesting_account_id  = true
-  skip_region_validation      = true
-
-  endpoints {
-    s3 = "https://oos.eu-west-2.outscale.com"
-  }
-}
-
 ################################################################################
 # Test: defaults create nothing
 ################################################################################
@@ -49,10 +35,6 @@ run "defaults_create_nothing" {
     error_message = "No images should be created when enable_image is false."
   }
 
-  assert {
-    condition     = length(keys(aws_s3_bucket.this)) == 0
-    error_message = "No OOS buckets should be created when enable_oos is false."
-  }
 }
 
 ################################################################################
@@ -140,30 +122,6 @@ run "invalid_environment_rejected" {
   }
 
   expect_failures = [var.environment]
-}
-
-################################################################################
-# Test: OOS bucket creation
-################################################################################
-
-run "oos_bucket_creation" {
-  command = plan
-
-  variables {
-    project_name = "test-project"
-    environment  = "dev"
-    enable_oos   = true
-    oos_buckets = {
-      assets = {
-        bucket = "test-project-dev-assets"
-      }
-    }
-  }
-
-  assert {
-    condition     = length(keys(aws_s3_bucket.this)) == 1
-    error_message = "Expected one OOS bucket to be planned."
-  }
 }
 
 ################################################################################

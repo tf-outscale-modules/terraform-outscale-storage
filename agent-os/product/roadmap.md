@@ -4,7 +4,7 @@
 
 - **Volume management** — Create, attach, detach, and configure BSU volumes with configurable types (standard, gp2, io1) and sizes
 - **Snapshot management** — Create, copy, and manage BSU snapshots with tagging and lifecycle support
-- **Object storage (OOS)** — S3-compatible object storage bucket provisioning with access policies and versioning
+- **Image management (OMI)** — Create, copy, and export machine images with block device mappings
 - **Backup policies** — Automated backup scheduling and retention policies for volumes and snapshots
 
 ## Phase 2: Post-Launch
