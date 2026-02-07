@@ -24,4 +24,3 @@
 - Configure per-project (GitHub Actions, GitLab CI, etc.)
 
 ## Other
-
