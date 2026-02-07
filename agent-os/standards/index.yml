@@ -1,0 +1,36 @@
+# Agent OS Standards Index
+
+root:
+  repo-structure:
+    description: Needs description - run /index-standards
+
+global:
+  code-style:
+    description: Needs description - run /index-standards
+  documentation:
+    description: Needs description - run /index-standards
+  security:
+    description: Needs description - run /index-standards
+  versioning:
+    description: Needs description - run /index-standards
+
+terraform:
+  module-structure:
+    description: Needs description - run /index-standards
+  naming:
+    description: Needs description - run /index-standards
+  outputs:
+    description: Needs description - run /index-standards
+  providers:
+    description: Needs description - run /index-standards
+  state:
+    description: Needs description - run /index-standards
+  tech-stack:
+    description: Needs description - run /index-standards
+  variables:
+    description: Needs description - run /index-standards
+
+testing:
+  terraform-tests:
+    description: Needs description - run /index-standards
+
