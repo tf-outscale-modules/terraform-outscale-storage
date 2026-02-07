@@ -10,7 +10,9 @@ terraform {
 }
 
 # Outscale provider for BSU volumes, snapshots, and images
-provider "outscale" {}
+provider "outscale" {
+  region = var.region
+}
 
 module "storage" {
   source = "../../"
@@ -49,18 +51,18 @@ module "storage" {
     }
   }
 
-  volume_links = {
-    data_attach = {
-      device_name = "/dev/sdb"
-      vm_id       = var.vm_id
-      volume_key  = "data"
-    }
-    logs_attach = {
-      device_name = "/dev/sdc"
-      vm_id       = var.vm_id
-      volume_key  = "logs"
-    }
-  }
+  # volume_links = {
+  #   data_attach = {
+  #     device_name = "/dev/sdb"
+  #     vm_id       = var.vm_id
+  #     volume_key  = "data"
+  #   }
+  #   logs_attach = {
+  #     device_name = "/dev/sdc"
+  #     vm_id       = var.vm_id
+  #     volume_key  = "logs"
+  #   }
+  # }
 
   ############################################################################
   # Snapshots
@@ -77,26 +79,26 @@ module "storage" {
       volume_key  = "logs"
       description = "Weekly backup of logs volume"
     }
-    external_copy = {
-      source_snapshot_id = var.source_snapshot_id
-      source_region_name = var.region
-      description        = "Copy of an external snapshot"
-    }
+    # external_copy = {
+    #   source_snapshot_id = var.source_snapshot_id
+    #   source_region_name = var.region
+    #   description        = "Copy of an external snapshot"
+    # }
   }
 
-  snapshot_export_tasks = {
-    data_export = {
-      snapshot_key      = "data_backup"
-      disk_image_format = "qcow2"
-      osu_bucket        = "my-project-prod-exports"
-      osu_prefix        = "snapshots/"
-    }
-  }
+  # snapshot_export_tasks = {
+  #   data_export = {
+  #     snapshot_key      = "data_backup"
+  #     disk_image_format = "qcow2"
+  #     osu_bucket        = "my-project-prod-exports"
+  #     osu_prefix        = "snapshots/"
+  #   }
+  # }
 
-  snapshot_export_osu_api_key = {
-    api_key_id = var.osu_api_key_id
-    secret_key = var.osu_secret_key
-  }
+  # snapshot_export_osu_api_key = {
+  #   api_key_id = var.osu_api_key_id
+  #   secret_key = var.osu_secret_key
+  # }
 
   ############################################################################
   # Images (OMI)
@@ -137,18 +139,18 @@ module "storage" {
     }
   }
 
-  image_export_tasks = {
-    base_export = {
-      image_key         = "base"
-      disk_image_format = "raw"
-      osu_bucket        = "my-project-prod-exports"
-      osu_prefix        = "images/"
-    }
-  }
+  # image_export_tasks = {
+  #   base_export = {
+  #     image_key         = "base"
+  #     disk_image_format = "raw"
+  #     osu_bucket        = "my-project-prod-exports"
+  #     osu_prefix        = "images/"
+  #   }
+  # }
 
-  image_export_osu_api_key = {
-    api_key_id = var.osu_api_key_id
-    secret_key = var.osu_secret_key
-  }
+  # image_export_osu_api_key = {
+  #   api_key_id = var.osu_api_key_id
+  #   secret_key = var.osu_secret_key
+  # }
 
 }

@@ -50,6 +50,13 @@ resource "outscale_image" "this" {
 resource "outscale_image_export_task" "this" {
   for_each = var.enable_image ? var.image_export_tasks : {}
 
+  lifecycle {
+    precondition {
+      condition     = var.image_export_osu_api_key != null
+      error_message = "image_export_osu_api_key must be provided when image_export_tasks is non-empty."
+    }
+  }
+
   image_id = (
     each.value.image_key != null
     ? outscale_image.this[each.value.image_key].image_id
@@ -152,6 +159,13 @@ resource "outscale_snapshot" "this" {
 
 resource "outscale_snapshot_export_task" "this" {
   for_each = var.enable_snapshot ? var.snapshot_export_tasks : {}
+
+  lifecycle {
+    precondition {
+      condition     = var.snapshot_export_osu_api_key != null
+      error_message = "snapshot_export_osu_api_key must be provided when snapshot_export_tasks is non-empty."
+    }
+  }
 
   snapshot_id = (
     each.value.snapshot_key != null
