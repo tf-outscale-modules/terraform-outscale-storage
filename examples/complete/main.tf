@@ -104,40 +104,40 @@ module "storage" {
   # Images (OMI)
   ############################################################################
 
-  enable_image = true
+  # enable_image = true
 
-  images = {
-    base = {
-      image_name  = "my-project-prod-base"
-      description = "Base image from running VM"
-      vm_id       = var.vm_id
-      no_reboot   = true
-    }
-    custom = {
-      image_name  = "my-project-prod-custom"
-      description = "Custom image with block device mappings"
-      vm_id       = var.vm_id
-      no_reboot   = true
-      block_device_mappings = [
-        {
-          device_name = "/dev/sda1"
-          bsu = {
-            volume_size           = 50
-            volume_type           = "gp2"
-            delete_on_vm_deletion = true
-          }
-        },
-        {
-          device_name = "/dev/sdb"
-          bsu = {
-            volume_size = 100
-            volume_type = "io1"
-            iops        = 3000
-          }
-        }
-      ]
-    }
-  }
+  # images = {
+  #   base = {
+  #     image_name  = "my-project-prod-base"
+  #     description = "Base image from running VM"
+  #     vm_id       = var.vm_id
+  #     no_reboot   = true
+  #   }
+  #   custom = {
+  #     image_name  = "my-project-prod-custom"
+  #     description = "Custom image with block device mappings"
+  #     vm_id       = var.vm_id
+  #     no_reboot   = true
+  #     block_device_mappings = [
+  #       {
+  #         device_name = "/dev/sda1"
+  #         bsu = {
+  #           volume_size           = 50
+  #           volume_type           = "gp2"
+  #           delete_on_vm_deletion = true
+  #         }
+  #       },
+  #       {
+  #         device_name = "/dev/sdb"
+  #         bsu = {
+  #           volume_size = 100
+  #           volume_type = "io1"
+  #           iops        = 3000
+  #         }
+  #       }
+  #     ]
+  #   }
+  # }
 
   # image_export_tasks = {
   #   base_export = {

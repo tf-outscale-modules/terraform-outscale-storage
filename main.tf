@@ -98,7 +98,11 @@ resource "outscale_volume" "this" {
   snapshot_id    = each.value.snapshot_id
 
   dynamic "tags" {
-    for_each = merge(local.common_tags, each.value.tags)
+    for_each = merge(
+      local.common_tags,
+      { Name = coalesce(each.value.name, "${var.project_name}-${var.environment}-${each.key}") },
+      each.value.tags,
+    )
 
     content {
       key   = tags.key
@@ -144,7 +148,11 @@ resource "outscale_snapshot" "this" {
   snapshot_size      = each.value.snapshot_size
 
   dynamic "tags" {
-    for_each = merge(local.common_tags, each.value.tags)
+    for_each = merge(
+      local.common_tags,
+      { Name = coalesce(each.value.name, "${var.project_name}-${var.environment}-${each.key}") },
+      each.value.tags,
+    )
 
     content {
       key   = tags.key

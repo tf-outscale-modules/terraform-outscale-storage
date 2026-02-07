@@ -52,6 +52,7 @@ variable "tags" {
 variable "volumes" {
   description = "Map of BSU volumes to create. Each key is a logical name used for cross-referencing."
   type = map(object({
+    name           = optional(string)
     subregion_name = string
     size           = number
     volume_type    = optional(string, "standard")
@@ -109,6 +110,7 @@ variable "volume_links" {
 variable "snapshots" {
   description = "Map of snapshots to create. Use volume_key to reference a volume from the volumes map, or volume_id for an external volume. Set source_snapshot_id to copy an existing snapshot."
   type = map(object({
+    name               = optional(string)
     description        = optional(string)
     volume_key         = optional(string)
     volume_id          = optional(string)
