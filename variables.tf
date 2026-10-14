@@ -135,12 +135,13 @@ variable "snapshots" {
 variable "snapshot_export_tasks" {
   description = "Map of snapshot export tasks. Use snapshot_key to reference a snapshot from the snapshots map, or snapshot_id for an external snapshot."
   type = map(object({
-    snapshot_key      = optional(string)
-    snapshot_id       = optional(string)
-    disk_image_format = string
-    osu_bucket        = string
-    osu_prefix        = optional(string)
-    tags              = optional(map(string), {})
+    snapshot_key        = optional(string)
+    snapshot_id         = optional(string)
+    disk_image_format   = string
+    osu_bucket          = string
+    osu_prefix          = optional(string)
+    wait_for_completion = optional(bool) # provider default: true (wait until the export completes)
+    tags                = optional(map(string), {})
   }))
   default = {}
 
@@ -182,6 +183,8 @@ variable "images" {
     source_image_id    = optional(string)
     source_region_name = optional(string)
     no_reboot          = optional(bool)
+    boot_modes         = optional(list(string)) # uefi | legacy
+    tpm_mandatory      = optional(bool)         # VMs created from the OMI must enable a vTPM
     block_device_mappings = optional(list(object({
       device_name         = optional(string)
       virtual_device_name = optional(string)
@@ -196,17 +199,25 @@ variable "images" {
     tags = optional(map(string), {})
   }))
   default = {}
+
+  validation {
+    condition = alltrue(flatten([
+      for k, v in var.images : [for mode in coalesce(v.boot_modes, []) : contains(["uefi", "legacy"], mode)]
+    ]))
+    error_message = "Image boot_modes must contain only: uefi, legacy."
+  }
 }
 
 variable "image_export_tasks" {
   description = "Map of image export tasks. Use image_key to reference an image from the images map, or image_id for an external image."
   type = map(object({
-    image_key         = optional(string)
-    image_id          = optional(string)
-    disk_image_format = string
-    osu_bucket        = string
-    osu_prefix        = optional(string)
-    tags              = optional(map(string), {})
+    image_key           = optional(string)
+    image_id            = optional(string)
+    disk_image_format   = string
+    osu_bucket          = string
+    osu_prefix          = optional(string)
+    wait_for_completion = optional(bool) # provider default: true (wait until the export completes)
+    tags                = optional(map(string), {})
   }))
   default = {}
 
