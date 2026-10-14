@@ -11,6 +11,8 @@ resource "outscale_image" "this" {
   source_image_id    = each.value.source_image_id
   source_region_name = each.value.source_region_name
   no_reboot          = each.value.no_reboot
+  boot_modes         = each.value.boot_modes
+  tpm_mandatory      = each.value.tpm_mandatory
 
   dynamic "block_device_mappings" {
     for_each = each.value.block_device_mappings
@@ -62,6 +64,7 @@ resource "outscale_image_export_task" "this" {
     ? outscale_image.this[each.value.image_key].image_id
     : each.value.image_id
   )
+  wait_for_completion = each.value.wait_for_completion
 
   osu_export {
     disk_image_format = each.value.disk_image_format
@@ -180,6 +183,7 @@ resource "outscale_snapshot_export_task" "this" {
     ? outscale_snapshot.this[each.value.snapshot_key].snapshot_id
     : each.value.snapshot_id
   )
+  wait_for_completion = each.value.wait_for_completion
 
   osu_export {
     disk_image_format = each.value.disk_image_format
