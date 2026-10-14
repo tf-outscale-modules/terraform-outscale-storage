@@ -156,3 +156,49 @@ run "invalid_disk_format_rejected" {
 
   expect_failures = [var.snapshot_export_tasks]
 }
+
+################################################################################
+# Test: image boot modes and vTPM
+################################################################################
+
+run "image_boot_modes_and_tpm" {
+  command = plan
+
+  variables {
+    project_name = "test-project"
+    environment  = "dev"
+    enable_image = true
+    images = {
+      golden = {
+        image_name    = "golden"
+        vm_id         = "i-12345678"
+        boot_modes    = ["uefi"]
+        tpm_mandatory = true
+      }
+    }
+  }
+
+  assert {
+    condition     = outscale_image.this["golden"].tpm_mandatory == true && outscale_image.this["golden"].boot_modes == toset(["uefi"])
+    error_message = "boot_modes/tpm_mandatory not passed through"
+  }
+}
+
+run "invalid_boot_mode_rejected" {
+  command = plan
+
+  variables {
+    project_name = "test-project"
+    environment  = "dev"
+    enable_image = true
+    images = {
+      golden = {
+        image_name = "golden"
+        vm_id      = "i-12345678"
+        boot_modes = ["bios"]
+      }
+    }
+  }
+
+  expect_failures = [var.images]
+}

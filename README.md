@@ -11,7 +11,8 @@ Terraform module for managing Outscale cloud storage resources: BSU volumes, sna
 
 - **BSU Volumes** — Create and attach block storage volumes (standard, gp2, io1) with configurable sizes and IOPS
 - **Snapshots** — Create, copy, and export BSU snapshots with cross-volume references
-- **Images (OMI)** — Create, copy, and export machine images with block device mappings
+- **Images (OMI)** — Create, copy, and export machine images with block device mappings, boot modes (UEFI/legacy) and mandatory vTPM
+- **Export tasks** — Optionally return immediately instead of waiting for completion (`wait_for_completion = false`)
 - **Feature Flags** — Enable only the resources you need with `enable_*` variables
 - **Cross-referencing** — Use `_key` pattern to reference resources within the module or `_id` for external resources
 - **Consistent Tagging** — Common tags (Project, Environment, ManagedBy) automatically applied to all resources
@@ -21,7 +22,7 @@ Terraform module for managing Outscale cloud storage resources: BSU volumes, sna
 | Name | Version |
 |------|---------|
 | [terraform](#requirement\_terraform) | >= 1.5 |
-| [outscale](#requirement\_outscale) | ~> 1.0 |
+| [outscale](#requirement\_outscale) | ~> 1.8 |
 
 ## Usage
 
@@ -128,13 +129,13 @@ module "storage" {
 | Name | Version |
 |------|---------|
 | <a name="requirement_terraform"></a> [terraform](#requirement\_terraform) | >= 1.5 |
-| <a name="requirement_outscale"></a> [outscale](#requirement\_outscale) | ~> 1.0 |
+| <a name="requirement_outscale"></a> [outscale](#requirement\_outscale) | ~> 1.8 |
 
 ## Providers
 
 | Name | Version |
 |------|---------|
-| <a name="provider_outscale"></a> [outscale](#provider\_outscale) | ~> 1.0 |
+| <a name="provider_outscale"></a> [outscale](#provider\_outscale) | ~> 1.8 |
 
 ## Modules
 
@@ -160,11 +161,11 @@ No modules.
 | <a name="input_enable_volume"></a> [enable\_volume](#input\_enable\_volume) | Enable BSU volume resources. | `bool` | `false` | no |
 | <a name="input_environment"></a> [environment](#input\_environment) | Deployment environment. Valid values: dev, staging, prod. | `string` | n/a | yes |
 | <a name="input_image_export_osu_api_key"></a> [image\_export\_osu\_api\_key](#input\_image\_export\_osu\_api\_key) | OSU API key for image export tasks. Required when image\_export\_tasks is non-empty. | <pre>object({<br/>    api_key_id = string<br/>    secret_key = string<br/>  })</pre> | `null` | no |
-| <a name="input_image_export_tasks"></a> [image\_export\_tasks](#input\_image\_export\_tasks) | Map of image export tasks. Use image\_key to reference an image from the images map, or image\_id for an external image. | <pre>map(object({<br/>    image_key         = optional(string)<br/>    image_id          = optional(string)<br/>    disk_image_format = string<br/>    osu_bucket        = string<br/>    osu_prefix        = optional(string)<br/>    tags              = optional(map(string), {})<br/>  }))</pre> | `{}` | no |
-| <a name="input_images"></a> [images](#input\_images) | Map of images (OMI) to create. Specify vm\_id to create from a running VM, or source\_image\_id to copy an existing image. | <pre>map(object({<br/>    image_name         = string<br/>    description        = optional(string)<br/>    vm_id              = optional(string)<br/>    source_image_id    = optional(string)<br/>    source_region_name = optional(string)<br/>    no_reboot          = optional(bool)<br/>    block_device_mappings = optional(list(object({<br/>      device_name         = optional(string)<br/>      virtual_device_name = optional(string)<br/>      bsu = optional(object({<br/>        delete_on_vm_deletion = optional(bool)<br/>        iops                  = optional(number)<br/>        snapshot_id           = optional(string)<br/>        volume_size           = optional(number)<br/>        volume_type           = optional(string)<br/>      }))<br/>    })), [])<br/>    tags = optional(map(string), {})<br/>  }))</pre> | `{}` | no |
+| <a name="input_image_export_tasks"></a> [image\_export\_tasks](#input\_image\_export\_tasks) | Map of image export tasks. Use image\_key to reference an image from the images map, or image\_id for an external image. | <pre>map(object({<br/>    image_key           = optional(string)<br/>    image_id            = optional(string)<br/>    disk_image_format   = string<br/>    osu_bucket          = string<br/>    osu_prefix          = optional(string)<br/>    wait_for_completion = optional(bool) # provider default: true (wait until the export completes)<br/>    tags                = optional(map(string), {})<br/>  }))</pre> | `{}` | no |
+| <a name="input_images"></a> [images](#input\_images) | Map of images (OMI) to create. Specify vm\_id to create from a running VM, or source\_image\_id to copy an existing image. | <pre>map(object({<br/>    image_name         = string<br/>    description        = optional(string)<br/>    vm_id              = optional(string)<br/>    source_image_id    = optional(string)<br/>    source_region_name = optional(string)<br/>    no_reboot          = optional(bool)<br/>    boot_modes         = optional(list(string)) # uefi | legacy<br/>    tpm_mandatory      = optional(bool)         # VMs created from the OMI must enable a vTPM<br/>    block_device_mappings = optional(list(object({<br/>      device_name         = optional(string)<br/>      virtual_device_name = optional(string)<br/>      bsu = optional(object({<br/>        delete_on_vm_deletion = optional(bool)<br/>        iops                  = optional(number)<br/>        snapshot_id           = optional(string)<br/>        volume_size           = optional(number)<br/>        volume_type           = optional(string)<br/>      }))<br/>    })), [])<br/>    tags = optional(map(string), {})<br/>  }))</pre> | `{}` | no |
 | <a name="input_project_name"></a> [project\_name](#input\_project\_name) | Name of the project. Used in resource naming and tagging. | `string` | n/a | yes |
 | <a name="input_snapshot_export_osu_api_key"></a> [snapshot\_export\_osu\_api\_key](#input\_snapshot\_export\_osu\_api\_key) | OSU API key for snapshot export tasks. Required when snapshot\_export\_tasks is non-empty. | <pre>object({<br/>    api_key_id = string<br/>    secret_key = string<br/>  })</pre> | `null` | no |
-| <a name="input_snapshot_export_tasks"></a> [snapshot\_export\_tasks](#input\_snapshot\_export\_tasks) | Map of snapshot export tasks. Use snapshot\_key to reference a snapshot from the snapshots map, or snapshot\_id for an external snapshot. | <pre>map(object({<br/>    snapshot_key      = optional(string)<br/>    snapshot_id       = optional(string)<br/>    disk_image_format = string<br/>    osu_bucket        = string<br/>    osu_prefix        = optional(string)<br/>    tags              = optional(map(string), {})<br/>  }))</pre> | `{}` | no |
+| <a name="input_snapshot_export_tasks"></a> [snapshot\_export\_tasks](#input\_snapshot\_export\_tasks) | Map of snapshot export tasks. Use snapshot\_key to reference a snapshot from the snapshots map, or snapshot\_id for an external snapshot. | <pre>map(object({<br/>    snapshot_key        = optional(string)<br/>    snapshot_id         = optional(string)<br/>    disk_image_format   = string<br/>    osu_bucket          = string<br/>    osu_prefix          = optional(string)<br/>    wait_for_completion = optional(bool) # provider default: true (wait until the export completes)<br/>    tags                = optional(map(string), {})<br/>  }))</pre> | `{}` | no |
 | <a name="input_snapshots"></a> [snapshots](#input\_snapshots) | Map of snapshots to create. Use volume\_key to reference a volume from the volumes map, or volume\_id for an external volume. Set source\_snapshot\_id to copy an existing snapshot. | <pre>map(object({<br/>    name               = optional(string)<br/>    description        = optional(string)<br/>    volume_key         = optional(string)<br/>    volume_id          = optional(string)<br/>    source_snapshot_id = optional(string)<br/>    source_region_name = optional(string)<br/>    file_location      = optional(string)<br/>    snapshot_size      = optional(number)<br/>    tags               = optional(map(string), {})<br/>  }))</pre> | `{}` | no |
 | <a name="input_tags"></a> [tags](#input\_tags) | Additional tags to apply to all resources. Merged with common tags (Project, Environment, ManagedBy). | `map(string)` | `{}` | no |
 | <a name="input_volume_links"></a> [volume\_links](#input\_volume\_links) | Map of volume-to-VM attachments. Use volume\_key to reference a volume from the volumes map, or volume\_id for an external volume. | <pre>map(object({<br/>    device_name = string<br/>    vm_id       = string<br/>    volume_key  = optional(string)<br/>    volume_id   = optional(string)<br/>    tags        = optional(map(string), {})<br/>  }))</pre> | `{}` | no |
@@ -213,7 +214,7 @@ This module is provided "as is", without warranty of any kind, express or implie
 [terraform-badge]: https://img.shields.io/badge/Terraform-%3E%3D1.5-623CE4
 [terraform-url]: https://www.terraform.io
 
-[provider-badge]: https://img.shields.io/badge/Outscale%20Provider-~%3E1.0-blue
+[provider-badge]: https://img.shields.io/badge/Outscale%20Provider-~%3E1.8-blue
 [provider-url]: https://registry.terraform.io/providers/outscale/outscale/latest
 
 [release-badge]: https://img.shields.io/gitlab/v/release/leminnov/terraform/modules/outscale-storage?include_prereleases&sort=semver
