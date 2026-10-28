@@ -27,6 +27,11 @@ variable "enable_image" {
 variable "project_name" {
   description = "Name of the project. Used in resource naming and tagging."
   type        = string
+
+  validation {
+    condition     = length(trimspace(var.project_name)) > 0 && length(var.project_name) <= 100
+    error_message = "project_name must not be blank and must be at most 100 characters."
+  }
 }
 
 variable "environment" {
@@ -40,7 +45,7 @@ variable "environment" {
 }
 
 variable "tags" {
-  description = "Additional tags to apply to all resources. Merged with common tags (Project, Environment, ManagedBy)."
+  description = "Additional tags to apply to all resources. Merged with common tags (Project, Environment, ManagedBy), which win on a key conflict."
   type        = map(string)
   default     = {}
 }
@@ -85,13 +90,13 @@ variable "volumes" {
 }
 
 variable "volume_links" {
-  description = "Map of volume-to-VM attachments. Use volume_key to reference a volume from the volumes map, or volume_id for an external volume."
+  description = "Map of volume-to-VM attachments. Use volume_key to reference a volume from the volumes map, or volume_id for an external volume. The tags attribute is deprecated and ignored (a volume link has no tags)."
   type = map(object({
     device_name = string
     vm_id       = string
     volume_key  = optional(string)
     volume_id   = optional(string)
-    tags        = optional(map(string), {})
+    tags        = optional(map(string), {}) # deprecated and ignored: a volume link has no tags
   }))
   default = {}
 
@@ -205,6 +210,11 @@ variable "images" {
       for k, v in var.images : [for mode in coalesce(v.boot_modes, []) : contains(["uefi", "legacy"], mode)]
     ]))
     error_message = "Image boot_modes must contain only: uefi, legacy."
+  }
+
+  validation {
+    condition     = alltrue([for k, v in var.images : v.vm_id != null || v.source_image_id != null])
+    error_message = "Each image must specify either vm_id or source_image_id."
   }
 }
 

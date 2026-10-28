@@ -1,12 +1,8 @@
 ################################################################################
-# Provider configuration for tests
+# Mocked provider for tests (no Outscale account needed)
 ################################################################################
 
-provider "outscale" {
-  access_key_id = "test-access-key"
-  secret_key_id = "test-secret-key"
-  region        = "eu-west-2"
-}
+mock_provider "outscale" {}
 
 ################################################################################
 # Test: defaults create nothing
@@ -201,4 +197,220 @@ run "invalid_boot_mode_rejected" {
   }
 
   expect_failures = [var.images]
+}
+
+################################################################################
+# Test: tags_cannot_override_module_tags
+################################################################################
+
+run "tags_cannot_override_module_tags" {
+  command = plan
+
+  variables {
+    project_name  = "demo"
+    environment   = "dev"
+    enable_volume = true
+    tags = {
+      ManagedBy   = "manual"
+      Project     = "other"
+      Environment = "other"
+      Team        = "a"
+    }
+    volumes = {
+      data = {
+        subregion_name = "eu-west-2a"
+        size           = 10
+      }
+    }
+  }
+
+  assert {
+    condition = alltrue([
+      for t in outscale_volume.this["data"].tags :
+      t.key != "ManagedBy" || t.value == "terraform"
+      ]) && alltrue([
+      for t in outscale_volume.this["data"].tags :
+      t.key != "Project" || t.value == "demo"
+      ]) && alltrue([
+      for t in outscale_volume.this["data"].tags :
+      t.key != "Environment" || t.value == "dev"
+    ])
+    error_message = "var.tags must not override Project, Environment or ManagedBy."
+  }
+
+  assert {
+    condition     = contains([for t in outscale_volume.this["data"].tags : t.key], "Team")
+    error_message = "Extra tags must still be applied."
+  }
+}
+
+################################################################################
+# Test: image and export task Name tags
+################################################################################
+
+run "image_and_export_task_name_tags" {
+  command = plan
+
+  variables {
+    project_name = "demo"
+    environment  = "dev"
+    enable_image = true
+    images = {
+      base = {
+        image_name = "golden"
+        vm_id      = "i-12345678"
+      }
+    }
+    image_export_tasks = {
+      base_export = {
+        image_key         = "base"
+        disk_image_format = "raw"
+        osu_bucket        = "exports"
+      }
+    }
+    image_export_osu_api_key = {
+      api_key_id = "id"
+      secret_key = "secret"
+    }
+  }
+
+  # The export task triggers the secret-in-state warning, which the test expects.
+  expect_failures = [check.osu_api_key_in_state]
+
+  assert {
+    condition     = contains([for t in outscale_image.this["base"].tags : "${t.key}=${t.value}"], "Name=golden")
+    error_message = "Image must carry Name = image_name."
+  }
+
+  assert {
+    condition     = contains([for t in outscale_image_export_task.this["base_export"].tags : "${t.key}=${t.value}"], "Name=demo-dev-base_export")
+    error_message = "Export task must carry a generated Name tag."
+  }
+}
+
+################################################################################
+# Test: image without source rejected
+################################################################################
+
+run "image_without_source_rejected" {
+  command = plan
+
+  variables {
+    project_name = "demo"
+    environment  = "dev"
+    enable_image = true
+    images = {
+      base = {
+        image_name = "golden"
+      }
+    }
+  }
+
+  expect_failures = [var.images]
+}
+
+################################################################################
+# Test: image from source image accepted
+################################################################################
+
+run "image_from_source_image_accepted" {
+  command = plan
+
+  variables {
+    project_name = "demo"
+    environment  = "dev"
+    enable_image = true
+    images = {
+      copy = {
+        image_name      = "copy"
+        source_image_id = "ami-12345678"
+      }
+    }
+  }
+
+  assert {
+    condition     = length(outscale_image.this) == 1
+    error_message = "An image with source_image_id must be planned."
+  }
+}
+
+################################################################################
+# Test: blank project_name rejected
+################################################################################
+
+run "blank_project_name_rejected" {
+  command = plan
+
+  variables {
+    project_name = " "
+    environment  = "dev"
+  }
+
+  expect_failures = [var.project_name]
+}
+
+################################################################################
+# Test: overlong project_name rejected
+################################################################################
+
+run "long_project_name_rejected" {
+  command = plan
+
+  variables {
+    project_name = join("", [for i in range(101) : "a"])
+    environment  = "dev"
+  }
+
+  expect_failures = [var.project_name]
+}
+
+################################################################################
+# Test: export task warns about key in state
+################################################################################
+
+run "export_task_warns_secret_in_state" {
+  command = plan
+
+  variables {
+    project_name    = "demo"
+    environment     = "dev"
+    enable_snapshot = true
+    snapshot_export_tasks = {
+      export = {
+        snapshot_id       = "snap-12345678"
+        disk_image_format = "qcow2"
+        osu_bucket        = "exports"
+      }
+    }
+    snapshot_export_osu_api_key = {
+      api_key_id = "id"
+      secret_key = "secret"
+    }
+  }
+
+  expect_failures = [check.osu_api_key_in_state]
+}
+
+################################################################################
+# Test: no export task, no warning
+################################################################################
+
+run "no_export_task_no_warning" {
+  command = plan
+
+  variables {
+    project_name    = "demo"
+    environment     = "dev"
+    enable_snapshot = true
+    snapshots = {
+      data = {
+        volume_id = "vol-12345678"
+      }
+    }
+  }
+
+  assert {
+    condition     = length(outscale_snapshot_export_task.this) == 0
+    error_message = "No export task expected."
+  }
 }
