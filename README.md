@@ -193,12 +193,13 @@ No modules.
 
 ## Contributing
 
-Contributions are welcome. Please ensure:
+Contributions are welcome. Changes are planned with [OpenSpec](https://github.com/Fission-AI/OpenSpec): `openspec/specs/` is the module's current contract and [AGENTS.md](AGENTS.md) routes to the engineering standards. Behaviour changes, new inputs, outputs or resources go through a change proposal (`/openspec-propose`) before any code. Run `mise run spec-setup` once per machine to register the standards stores. Please ensure:
 
 1. All code passes `terraform fmt -check`
 2. All variables and outputs have descriptions
 3. Tests pass with `terraform test`
-4. Pre-commit hooks pass with `pre-commit run -a`
+4. Specs pass with `mise run spec-validate`
+5. Pre-commit hooks pass with `pre-commit run -a`
 
 ## License
 
