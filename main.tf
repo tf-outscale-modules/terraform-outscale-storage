@@ -36,7 +36,7 @@ resource "outscale_image" "this" {
   }
 
   dynamic "tags" {
-    for_each = merge(local.common_tags, each.value.tags)
+    for_each = merge(local.common_tags, { Name = each.value.image_name }, each.value.tags)
 
     content {
       key   = tags.key
@@ -78,7 +78,11 @@ resource "outscale_image_export_task" "this" {
   }
 
   dynamic "tags" {
-    for_each = merge(local.common_tags, each.value.tags)
+    for_each = merge(
+      local.common_tags,
+      { Name = "${var.project_name}-${var.environment}-${each.key}" },
+      each.value.tags,
+    )
 
     content {
       key   = tags.key
@@ -197,7 +201,11 @@ resource "outscale_snapshot_export_task" "this" {
   }
 
   dynamic "tags" {
-    for_each = merge(local.common_tags, each.value.tags)
+    for_each = merge(
+      local.common_tags,
+      { Name = "${var.project_name}-${var.environment}-${each.key}" },
+      each.value.tags,
+    )
 
     content {
       key   = tags.key

@@ -115,7 +115,7 @@ module "storage" {
 ## Security Considerations
 
 1. **Sensitive variables** — Export API keys (`snapshot_export_osu_api_key`, `image_export_osu_api_key`) are marked as `sensitive` and should be provided via environment variables or CI/CD secrets
-2. **State encryption** — Always use encrypted remote state backends when managing storage resources
+2. **State encryption** — Always use encrypted remote state backends when managing storage resources. The `secret_key` of the export API keys lands in state (the provider has no write-only argument): see [SECURITY.md](SECURITY.md)
 3. **Least privilege** — Configure Outscale API keys with minimum required permissions for the resources being managed
 4. **No hardcoded secrets** — Never commit API keys or credentials to `.tf` or `.tfvars` files
 
@@ -167,8 +167,8 @@ No modules.
 | <a name="input_snapshot_export_osu_api_key"></a> [snapshot\_export\_osu\_api\_key](#input\_snapshot\_export\_osu\_api\_key) | OSU API key for snapshot export tasks. Required when snapshot\_export\_tasks is non-empty. | <pre>object({<br/>    api_key_id = string<br/>    secret_key = string<br/>  })</pre> | `null` | no |
 | <a name="input_snapshot_export_tasks"></a> [snapshot\_export\_tasks](#input\_snapshot\_export\_tasks) | Map of snapshot export tasks. Use snapshot\_key to reference a snapshot from the snapshots map, or snapshot\_id for an external snapshot. | <pre>map(object({<br/>    snapshot_key        = optional(string)<br/>    snapshot_id         = optional(string)<br/>    disk_image_format   = string<br/>    osu_bucket          = string<br/>    osu_prefix          = optional(string)<br/>    wait_for_completion = optional(bool) # provider default: true (wait until the export completes)<br/>    tags                = optional(map(string), {})<br/>  }))</pre> | `{}` | no |
 | <a name="input_snapshots"></a> [snapshots](#input\_snapshots) | Map of snapshots to create. Use volume\_key to reference a volume from the volumes map, or volume\_id for an external volume. Set source\_snapshot\_id to copy an existing snapshot. | <pre>map(object({<br/>    name               = optional(string)<br/>    description        = optional(string)<br/>    volume_key         = optional(string)<br/>    volume_id          = optional(string)<br/>    source_snapshot_id = optional(string)<br/>    source_region_name = optional(string)<br/>    file_location      = optional(string)<br/>    snapshot_size      = optional(number)<br/>    tags               = optional(map(string), {})<br/>  }))</pre> | `{}` | no |
-| <a name="input_tags"></a> [tags](#input\_tags) | Additional tags to apply to all resources. Merged with common tags (Project, Environment, ManagedBy). | `map(string)` | `{}` | no |
-| <a name="input_volume_links"></a> [volume\_links](#input\_volume\_links) | Map of volume-to-VM attachments. Use volume\_key to reference a volume from the volumes map, or volume\_id for an external volume. | <pre>map(object({<br/>    device_name = string<br/>    vm_id       = string<br/>    volume_key  = optional(string)<br/>    volume_id   = optional(string)<br/>    tags        = optional(map(string), {})<br/>  }))</pre> | `{}` | no |
+| <a name="input_tags"></a> [tags](#input\_tags) | Additional tags to apply to all resources. Merged with common tags (Project, Environment, ManagedBy), which win on a key conflict. | `map(string)` | `{}` | no |
+| <a name="input_volume_links"></a> [volume\_links](#input\_volume\_links) | Map of volume-to-VM attachments. Use volume\_key to reference a volume from the volumes map, or volume\_id for an external volume. The tags attribute is deprecated and ignored (a volume link has no tags). | <pre>map(object({<br/>    device_name = string<br/>    vm_id       = string<br/>    volume_key  = optional(string)<br/>    volume_id   = optional(string)<br/>    tags        = optional(map(string), {}) # deprecated and ignored: a volume link has no tags<br/>  }))</pre> | `{}` | no |
 | <a name="input_volumes"></a> [volumes](#input\_volumes) | Map of BSU volumes to create. Each key is a logical name used for cross-referencing. | <pre>map(object({<br/>    name           = optional(string)<br/>    subregion_name = string<br/>    size           = number<br/>    volume_type    = optional(string, "standard")<br/>    iops           = optional(number)<br/>    snapshot_id    = optional(string)<br/>    tags           = optional(map(string), {})<br/>  }))</pre> | `{}` | no |
 
 ## Outputs
@@ -189,15 +189,16 @@ No modules.
 | Document | Description |
 |----------|-------------|
 | [README](README.md) | Module overview and usage |
-| [CHANGELOG](CHANGELOG.md) | Release history |
+| [SECURITY](SECURITY.md) | What lands in state and its mitigation |
+| [Releases](https://gitlab.com/leminnov/terraform/modules/outscale-storage/-/releases) | Release history (the changelog is generated at release) |
 
 ## Contributing
 
 Contributions are welcome. Changes are planned with [OpenSpec](https://github.com/Fission-AI/OpenSpec): `openspec/specs/` is the module's current contract and [AGENTS.md](AGENTS.md) routes to the engineering standards. Behaviour changes, new inputs, outputs or resources go through a change proposal (`/openspec-propose`) before any code. Run `mise run spec-setup` once per machine to register the standards stores. Please ensure:
 
-1. All code passes `terraform fmt -check`
+1. All code passes `tofu fmt -check -recursive`
 2. All variables and outputs have descriptions
-3. Tests pass with `terraform test`
+3. Tests pass with `tofu test`
 4. Specs pass with `mise run spec-validate`
 5. Pre-commit hooks pass with `pre-commit run -a`
 
