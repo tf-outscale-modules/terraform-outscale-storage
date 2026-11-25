@@ -15,9 +15,16 @@ Mitigation:
 
 A future major release should switch to a write-only argument as soon as the provider offers one.
 
+## Sharing and retained data
+
+- **Public images**: `images[*].launch_permission.is_public = true` lets every Outscale account launch the OMI. It is opt-in, exclusive with `account_ids`, and reported by the `public_sharing` check on every plan. Share only images that hold no secret or proprietary content
+- **Snapshots are shared with account IDs only**: there is no public option. The provider's `outscale_snapshot_attributes` never revokes access (its delete is a no-op and it does not read permissions back), so removing an account from `create_volume_permission` or destroying the resource leaves access in place. Revoke it manually (Outscale API `UpdateSnapshot` with a permission removal, or Cockpit) and verify with `ReadSnapshots`
+- **Image permission changes**: every argument of `outscale_image_launch_permission` forces replacement; changing the account list unshares then re-shares the image, with a short unshared window
+- **Termination snapshot**: `volumes[*].termination_snapshot_name` takes a snapshot of the volume before it is destroyed. It is not in state or managed by the module, keeps the volume data and incurs storage cost until it is deleted by hand; protect it like the volume
+
 ## Least privilege
 
-Give the Outscale API credentials used by the provider only the permissions needed for the resource families you enable (volumes, snapshots, images).
+Give the Outscale API credentials used by the provider only the permissions needed for the resource families you enable (volumes, snapshots, images). Sharing additionally needs the permission to update images and snapshots (`UpdateImage`, `UpdateSnapshot`).
 
 ## Reporting vulnerabilities
 
