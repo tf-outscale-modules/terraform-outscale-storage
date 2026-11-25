@@ -13,6 +13,9 @@ resource "outscale_image" "this" {
   no_reboot          = each.value.no_reboot
   boot_modes         = each.value.boot_modes
   tpm_mandatory      = each.value.tpm_mandatory
+  architecture       = each.value.architecture
+  file_location      = each.value.file_location
+  root_device_name   = each.value.root_device_name
 
   dynamic "block_device_mappings" {
     for_each = each.value.block_device_mappings
@@ -42,6 +45,22 @@ resource "outscale_image" "this" {
       key   = tags.key
       value = tags.value
     }
+  }
+}
+
+################################################################################
+# Image Launch Permissions
+################################################################################
+
+resource "outscale_image_launch_permission" "this" {
+  for_each = local.image_launch_permissions
+
+  image_id = outscale_image.this[each.key].image_id
+
+  # Sorted and deduplicated so that reordering the list never replaces the resource (every argument is ForceNew).
+  permission_additions {
+    account_ids       = length(each.value.account_ids) > 0 ? sort(distinct(each.value.account_ids)) : null
+    global_permission = each.value.is_public ? "true" : null
   }
 }
 
@@ -104,6 +123,8 @@ resource "outscale_volume" "this" {
   iops           = each.value.volume_type == "io1" ? each.value.iops : null
   snapshot_id    = each.value.snapshot_id
 
+  termination_snapshot_name = each.value.termination_snapshot_name
+
   dynamic "tags" {
     for_each = merge(
       local.common_tags,
@@ -165,6 +186,22 @@ resource "outscale_snapshot" "this" {
       key   = tags.key
       value = tags.value
     }
+  }
+}
+
+################################################################################
+# Snapshot Create-Volume Permissions
+################################################################################
+
+resource "outscale_snapshot_attributes" "this" {
+  for_each = local.snapshot_create_volume_permissions
+
+  snapshot_id = outscale_snapshot.this[each.key].snapshot_id
+
+  # Sorted and deduplicated so that reordering the list never replaces the resource.
+  # The provider never revokes access: removing an account is a manual action (SECURITY.md).
+  permissions_to_create_volume_additions {
+    account_ids = sort(distinct(each.value.account_ids))
   }
 }
 

@@ -414,3 +414,368 @@ run "no_export_task_no_warning" {
     error_message = "No export task expected."
   }
 }
+
+################################################################################
+# Test: volume termination snapshot
+################################################################################
+
+run "volume_termination_snapshot" {
+  command = plan
+
+  variables {
+    project_name  = "demo"
+    environment   = "dev"
+    enable_volume = true
+    volumes = {
+      data = {
+        subregion_name            = "eu-west-2a"
+        size                      = 10
+        termination_snapshot_name = "data-final"
+      }
+      plain = {
+        subregion_name = "eu-west-2a"
+        size           = 10
+      }
+    }
+  }
+
+  assert {
+    condition     = outscale_volume.this["data"].termination_snapshot_name == "data-final"
+    error_message = "termination_snapshot_name must be passed when set."
+  }
+
+  assert {
+    condition     = outscale_volume.this["plain"].termination_snapshot_name == null
+    error_message = "termination_snapshot_name must be null by default."
+  }
+}
+
+################################################################################
+# Test: image registration (snapshot, manifest import)
+################################################################################
+
+run "image_registration_options" {
+  command = plan
+
+  variables {
+    project_name = "demo"
+    environment  = "dev"
+    enable_image = true
+    images = {
+      from_snapshot = {
+        image_name       = "from-snapshot"
+        architecture     = "x86_64"
+        root_device_name = "/dev/sda1"
+        block_device_mappings = [{
+          device_name = "/dev/sda1"
+          bsu         = { snapshot_id = "snap-12345678" }
+        }]
+      }
+      imported = {
+        image_name    = "imported"
+        file_location = "https://bucket.example/omi.manifest.xml"
+      }
+    }
+  }
+
+  assert {
+    condition = (
+      outscale_image.this["from_snapshot"].architecture == "x86_64"
+      && outscale_image.this["from_snapshot"].root_device_name == "/dev/sda1"
+    )
+    error_message = "architecture and root_device_name must be passed."
+  }
+
+  assert {
+    condition     = outscale_image.this["imported"].file_location == "https://bucket.example/omi.manifest.xml"
+    error_message = "file_location must be passed."
+  }
+}
+
+run "invalid_architecture_rejected" {
+  command = plan
+
+  variables {
+    project_name = "demo"
+    environment  = "dev"
+    enable_image = true
+    images = {
+      bad = {
+        image_name   = "bad"
+        vm_id        = "i-12345678"
+        architecture = "arm64"
+      }
+    }
+  }
+
+  expect_failures = [var.images]
+}
+
+run "image_block_devices_without_root_device_rejected" {
+  command = plan
+
+  variables {
+    project_name = "demo"
+    environment  = "dev"
+    enable_image = true
+    images = {
+      bad = {
+        image_name = "bad"
+        block_device_mappings = [{
+          device_name = "/dev/sda1"
+          bsu         = { snapshot_id = "snap-12345678" }
+        }]
+      }
+    }
+  }
+
+  expect_failures = [var.images]
+}
+
+################################################################################
+# Test: image launch permission
+################################################################################
+
+run "image_launch_permission_accounts" {
+  command = plan
+
+  variables {
+    project_name = "demo"
+    environment  = "dev"
+    enable_image = true
+    images = {
+      shared = {
+        image_name = "shared"
+        vm_id      = "i-12345678"
+        launch_permission = {
+          account_ids = ["222222222222", "111111111111", "222222222222"]
+        }
+      }
+      private = {
+        image_name = "private"
+        vm_id      = "i-12345678"
+      }
+    }
+  }
+
+  assert {
+    condition     = length(outscale_image_launch_permission.this) == 1 && contains(keys(outscale_image_launch_permission.this), "shared")
+    error_message = "Only the image that sets launch_permission gets a permission."
+  }
+
+  assert {
+    condition     = join(",", outscale_image_launch_permission.this["shared"].permission_additions[0].account_ids) == "111111111111,222222222222"
+    error_message = "account_ids must be sorted and deduplicated."
+  }
+
+  assert {
+    condition     = outscale_image_launch_permission.this["shared"].permission_additions[0].global_permission == null
+    error_message = "global_permission must not be sent for account sharing."
+  }
+}
+
+run "image_launch_permission_ignored_when_disabled" {
+  command = plan
+
+  variables {
+    project_name = "demo"
+    environment  = "dev"
+    images = {
+      shared = {
+        image_name        = "shared"
+        vm_id             = "i-12345678"
+        launch_permission = { account_ids = ["111111111111"] }
+      }
+    }
+  }
+
+  assert {
+    condition     = length(outscale_image_launch_permission.this) == 0
+    error_message = "No permission expected while enable_image is false."
+  }
+}
+
+run "image_launch_permission_public_warns" {
+  command = plan
+
+  variables {
+    project_name = "demo"
+    environment  = "dev"
+    enable_image = true
+    images = {
+      shared = {
+        image_name        = "shared"
+        vm_id             = "i-12345678"
+        launch_permission = { is_public = true }
+      }
+    }
+  }
+
+  expect_failures = [check.public_sharing]
+
+  assert {
+    condition     = outscale_image_launch_permission.this["shared"].permission_additions[0].global_permission == "true"
+    error_message = "Public sharing must send global_permission = true."
+  }
+}
+
+run "image_launch_permission_bad_account_rejected" {
+  command = plan
+
+  variables {
+    project_name = "demo"
+    environment  = "dev"
+    enable_image = true
+    images = {
+      shared = {
+        image_name        = "shared"
+        vm_id             = "i-12345678"
+        launch_permission = { account_ids = ["abc"] }
+      }
+    }
+  }
+
+  expect_failures = [var.images]
+}
+
+run "image_launch_permission_empty_rejected" {
+  command = plan
+
+  variables {
+    project_name = "demo"
+    environment  = "dev"
+    enable_image = true
+    images = {
+      shared = {
+        image_name        = "shared"
+        vm_id             = "i-12345678"
+        launch_permission = {}
+      }
+    }
+  }
+
+  expect_failures = [var.images]
+}
+
+run "image_launch_permission_public_and_accounts_rejected" {
+  command = plan
+
+  variables {
+    project_name = "demo"
+    environment  = "dev"
+    enable_image = true
+    images = {
+      shared = {
+        image_name        = "shared"
+        vm_id             = "i-12345678"
+        launch_permission = { account_ids = ["111111111111"], is_public = true }
+      }
+    }
+  }
+
+  expect_failures = [var.images]
+}
+
+################################################################################
+# Test: snapshot create-volume permission
+################################################################################
+
+run "snapshot_create_volume_permission" {
+  command = plan
+
+  variables {
+    project_name    = "demo"
+    environment     = "dev"
+    enable_snapshot = true
+    snapshots = {
+      shared = {
+        volume_id = "vol-12345678"
+        create_volume_permission = {
+          account_ids = ["222222222222", "111111111111", "111111111111"]
+        }
+      }
+      private = {
+        volume_id = "vol-12345678"
+      }
+    }
+  }
+
+  assert {
+    condition     = length(outscale_snapshot_attributes.this) == 1 && contains(keys(outscale_snapshot_attributes.this), "shared")
+    error_message = "Only the snapshot that sets create_volume_permission gets attributes."
+  }
+
+  assert {
+    condition     = join(",", outscale_snapshot_attributes.this["shared"].permissions_to_create_volume_additions[0].account_ids) == "111111111111,222222222222"
+    error_message = "account_ids must be sorted and deduplicated."
+  }
+}
+
+run "snapshot_create_volume_permission_bad_account_rejected" {
+  command = plan
+
+  variables {
+    project_name    = "demo"
+    environment     = "dev"
+    enable_snapshot = true
+    snapshots = {
+      shared = {
+        volume_id                = "vol-12345678"
+        create_volume_permission = { account_ids = ["abc"] }
+      }
+    }
+  }
+
+  expect_failures = [var.snapshots]
+}
+
+run "snapshot_create_volume_permission_empty_rejected" {
+  command = plan
+
+  variables {
+    project_name    = "demo"
+    environment     = "dev"
+    enable_snapshot = true
+    snapshots = {
+      shared = {
+        volume_id                = "vol-12345678"
+        create_volume_permission = { account_ids = [] }
+      }
+    }
+  }
+
+  expect_failures = [var.snapshots]
+}
+
+################################################################################
+# Test: account-only sharing does not warn
+################################################################################
+
+run "account_sharing_no_public_warning" {
+  command = plan
+
+  variables {
+    project_name    = "demo"
+    environment     = "dev"
+    enable_image    = true
+    enable_snapshot = true
+    images = {
+      shared = {
+        image_name        = "shared"
+        vm_id             = "i-12345678"
+        launch_permission = { account_ids = ["111111111111"] }
+      }
+    }
+    snapshots = {
+      shared = {
+        volume_id                = "vol-12345678"
+        create_volume_permission = { account_ids = ["111111111111"] }
+      }
+    }
+  }
+
+  assert {
+    condition     = length(outscale_image_launch_permission.this) == 1 && length(outscale_snapshot_attributes.this) == 1
+    error_message = "Both permissions expected and no public_sharing warning."
+  }
+}
