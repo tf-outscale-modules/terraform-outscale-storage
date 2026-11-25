@@ -63,7 +63,10 @@ variable "volumes" {
     volume_type    = optional(string, "standard")
     iops           = optional(number)
     snapshot_id    = optional(string)
-    tags           = optional(map(string), {})
+    # Takes a snapshot named like this just before the volume is destroyed. The snapshot is not
+    # managed by the module, outlives it and keeps the volume data until it is deleted by hand.
+    termination_snapshot_name = optional(string)
+    tags                      = optional(map(string), {})
   }))
   default = {}
 
@@ -113,7 +116,7 @@ variable "volume_links" {
 ################################################################################
 
 variable "snapshots" {
-  description = "Map of snapshots to create. Use volume_key to reference a volume from the volumes map, or volume_id for an external volume. Set source_snapshot_id to copy an existing snapshot."
+  description = "Map of snapshots to create. Use volume_key to reference a volume from the volumes map, or volume_id for an external volume. Set source_snapshot_id to copy an existing snapshot. create_volume_permission shares the snapshot with the listed 12-digit account IDs (never publicly); revoking access is manual, because removing an account or destroying the permission does not revoke it."
   type = map(object({
     name               = optional(string)
     description        = optional(string)
@@ -123,9 +126,22 @@ variable "snapshots" {
     source_region_name = optional(string)
     file_location      = optional(string)
     snapshot_size      = optional(number)
-    tags               = optional(map(string), {})
+    create_volume_permission = optional(object({
+      account_ids = list(string)
+    }))
+    tags = optional(map(string), {})
   }))
   default = {}
+
+  validation {
+    condition = alltrue([
+      for k, v in var.snapshots : v.create_volume_permission == null ? true : (
+        length(v.create_volume_permission.account_ids) > 0
+        && alltrue([for id in v.create_volume_permission.account_ids : can(regex("^[0-9]{12}$", id))])
+      )
+    ])
+    error_message = "Snapshot create_volume_permission account_ids must hold at least one 12-digit account ID."
+  }
 
   validation {
     condition = alltrue([
@@ -180,7 +196,7 @@ variable "snapshot_export_osu_api_key" {
 ################################################################################
 
 variable "images" {
-  description = "Map of images (OMI) to create. Specify vm_id to create from a running VM, or source_image_id to copy an existing image."
+  description = "Map of images (OMI) to create. Specify vm_id to create from a running VM, source_image_id to copy an existing image, file_location (pre-signed manifest URL) to import one, or block_device_mappings with root_device_name (and optional architecture) to register one from a snapshot; architecture, file_location and root_device_name are create-time settings. launch_permission shares the image with account_ids or, with is_public = true, with everyone (exclusive with account_ids; reported by a check)."
   type = map(object({
     image_name         = string
     description        = optional(string)
@@ -190,6 +206,9 @@ variable "images" {
     no_reboot          = optional(bool)
     boot_modes         = optional(list(string)) # uefi | legacy
     tpm_mandatory      = optional(bool)         # VMs created from the OMI must enable a vTPM
+    architecture       = optional(string)       # i386 | x86_64 (registration from a snapshot)
+    file_location      = optional(string)       # pre-signed URL of the OMI manifest to import
+    root_device_name   = optional(string)       # required when registering from a snapshot
     block_device_mappings = optional(list(object({
       device_name         = optional(string)
       virtual_device_name = optional(string)
@@ -201,6 +220,10 @@ variable "images" {
         volume_type           = optional(string)
       }))
     })), [])
+    launch_permission = optional(object({
+      account_ids = optional(list(string), [])
+      is_public   = optional(bool, false)
+    }))
     tags = optional(map(string), {})
   }))
   default = {}
@@ -213,8 +236,36 @@ variable "images" {
   }
 
   validation {
-    condition     = alltrue([for k, v in var.images : v.vm_id != null || v.source_image_id != null])
-    error_message = "Each image must specify either vm_id or source_image_id."
+    condition = alltrue([
+      for k, v in var.images : (
+        v.vm_id != null || v.source_image_id != null || v.file_location != null
+        || (length(v.block_device_mappings) > 0 && v.root_device_name != null)
+      )
+    ])
+    error_message = "Each image must specify one of: vm_id, source_image_id, file_location, or block_device_mappings with root_device_name."
+  }
+
+  validation {
+    condition     = alltrue([for k, v in var.images : contains(["i386", "x86_64"], coalesce(v.architecture, "x86_64"))])
+    error_message = "Image architecture must be one of: i386, x86_64."
+  }
+
+  validation {
+    condition = alltrue(flatten([
+      for k, v in var.images : v.launch_permission == null ? [] : [
+        for id in v.launch_permission.account_ids : can(regex("^[0-9]{12}$", id))
+      ]
+    ]))
+    error_message = "Image launch_permission account_ids must be 12-digit account IDs."
+  }
+
+  validation {
+    condition = alltrue([
+      for k, v in var.images : v.launch_permission == null ? true : (
+        (length(v.launch_permission.account_ids) > 0) != v.launch_permission.is_public
+      )
+    ])
+    error_message = "Image launch_permission must set account_ids or is_public = true, not both and not neither."
   }
 }
 

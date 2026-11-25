@@ -37,6 +37,9 @@ module "storage" {
       size           = 100
       volume_type    = "io1"
       iops           = 3000
+
+      # Snapshot taken before the volume is destroyed; it is not managed by the module and outlives it.
+      termination_snapshot_name = "my-project-prod-data-final"
     }
     logs = {
       subregion_name = "${var.region}a"
@@ -74,6 +77,11 @@ module "storage" {
     data_backup = {
       volume_key  = "data"
       description = "Daily backup of data volume"
+
+      # Accounts only (never public). Revoking access is manual: the provider does not revoke it.
+      create_volume_permission = length(var.snapshot_share_account_ids) > 0 ? {
+        account_ids = var.snapshot_share_account_ids
+      } : null
     }
     logs_backup = {
       volume_key  = "logs"
@@ -112,6 +120,28 @@ module "storage" {
   #     description = "Base image from running VM"
   #     vm_id       = var.vm_id
   #     no_reboot   = true
+  #   }
+  #   registered = {
+  #     image_name       = "my-project-prod-registered"
+  #     description      = "OMI registered from a snapshot"
+  #     architecture     = "x86_64"
+  #     root_device_name = "/dev/sda1"
+  #     block_device_mappings = [
+  #       {
+  #         device_name = "/dev/sda1"
+  #         bsu         = { snapshot_id = var.root_snapshot_id }
+  #       }
+  #     ]
+  #   }
+  #   imported = {
+  #     image_name    = "my-project-prod-imported"
+  #     file_location = var.manifest_url # pre-signed URL of the OMI manifest
+  #   }
+  #   shared = {
+  #     image_name  = "my-project-prod-shared"
+  #     vm_id       = var.vm_id
+  #     # account_ids xor is_public; is_public = true triggers check.public_sharing
+  #     launch_permission = { account_ids = var.image_share_account_ids }
   #   }
   #   custom = {
   #     image_name  = "my-project-prod-custom"
